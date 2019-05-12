@@ -5,6 +5,7 @@ import discord
 import random
 import requests
 import time
+import os
 
 
 # def main settings
