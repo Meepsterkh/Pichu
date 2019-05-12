@@ -4,7 +4,6 @@ from discord import Game
 import discord
 import random
 import requests
-import os
 import time
 
 
@@ -204,5 +203,6 @@ async def on_message(message):
 
     if (message.content.startswith("|start")):
         await Smash.Start()
+
 
 client.run(str(os.environ.get('BOT_TOKEN')))
