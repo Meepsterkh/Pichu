@@ -56,7 +56,7 @@ class SmashFn():
         rolePercent = discord.utils.get(self.message.server.roles, name='~0%')
         for member in self.message.server.members:
             await client.add_roles(member, rolePercent)
-            await client.send_message(self.message.channel, "Game has been Reset, Fight")
+        await client.send_message(self.message.channel, "Game has been Reset, Fight")
 
     async def attack(self, percentChange: int):
         for member in self.message.server.members:
