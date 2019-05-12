@@ -54,50 +54,65 @@ class SmashFn():
                 if(str(i)[-1] == "%"):
                     await client.delete_role(self.message.server, i)
 
-        await client.create_role(self.message.server, name = "0%")
-        rolePercent = discord.utils.get(self.message.server.roles, name='0%')
-        for member in self.message.server.members:
-            await client.add_roles(member, rolePercent)
-        await client.send_message(self.message.channel, "3!")
-        time.sleep(.5)
-        await client.send_message(self.message.channel, "2!")
-        time.sleep(.5)
-        await client.send_message(self.message.channel, "1!")
-        time.sleep(.5)
-        await client.send_message(self.message.channel, "GO!")
+        await client.create_role(self.message.server, name = "0%", colour = discord.Colour(0xffffff))
+        await client.send_message(self.message.channel, "Type \"|join\" to play!")
 
     async def attack(self, percentChange: int, growth: int, base: int):
         for member in self.message.server.members:
-            if (str(self.message.content[-19:-1]) == str(member.id)):
-                roles = discord.utils.get(self.message.server.members, name=member.name).roles
-                for i in roles:
-                    roleSpill = str(i).split()
-                    if(roleSpill[0][-1] == "%"):
-                        percent = int(roleSpill[0][:-1])
-                        await client.remove_roles(member, i)
+            await client.wait_until_ready()
+            if(self.check()):
+                if (str(self.message.content[-19:-1]) == str(member.id)):
+                    roles = discord.utils.get(self.message.server.members, name=member.name).roles
+                    for i in roles:
+                        roleSpill = str(i).split()
+                        if(roleSpill[0][-1] == "%"):
+                            percent = int(roleSpill[0][:-1])
+                            await client.remove_roles(member, i)
 
+                            if (percent + percentChange >= 120):
+                                colours = discord.Colour(0x660000)
+                            elif (percent + percentChange >= 100):
+                                colours = discord.Colour(0xCB0000)
+                            elif (percent + percentChange >= 80):
+                                colours = discord.Colour(0xD53333)
+                            elif (percent + percentChange >= 65):
+                                colours = discord.Colour(0xDF6666)
+                            elif(percent + percentChange >= 40):
+                                colours = discord.Colour(0xEA9999)
+                            elif(percent + percentChange >= 25):
+                                colours = discord.Colour(0xF4CCCC)
+                            else:
+                                colours = discord.Colour(0xFFFFFF)
 
-                        numStr = str(percent + percentChange) + "%"
-                        does = False
-                        for i in self.message.server.roles:
-                            if(i != numStr):
-                                does = True
-                        if(does):
-                            await client.create_role(self.message.server, name=numStr)
+                            numStr = str(percent + percentChange) + "%"
 
-                        await client.wait_until_ready()
-                        rolePercent = discord.utils.get(self.message.server.roles, name=numStr)
-                        await client.add_roles(member, rolePercent)
+                            does = False
+                            for i in self.message.server.roles:
+                                if(i != numStr):
+                                    does = True
+                            if(does):
+                                await client.create_role(self.message.server, name=numStr, colour = colours)
 
-                        await self.check(member, percent + percentChange, growth, base)
-                        if(self.died == False):
-                            await client.send_message(self.message.channel, str(member.name) + " now has " + numStr)
-                            self.died = False
+                            await client.wait_until_ready()
+                            rolePercent = discord.utils.get(self.message.server.roles, name=numStr)
+                            await client.add_roles(member, rolePercent)
 
-    async def check(self, member, percent, growth, base):
-        total = (percent * growth) + (base * 25)
+                            await self.death(member, percent + percentChange, growth, base)
+                            if(self.died == False):
+                                await client.send_message(self.message.channel, str(member.name) + " now has " + numStr)
+                                self.died = False
 
-        if(total >= 7500):
+    def check(self):
+        roles = discord.utils.get(self.message.server.members, name=self.message.author.name).roles
+        for i in roles:
+            roleSpill = str(i).split()
+            if (roleSpill[0][-1] == "%"):
+                return True
+
+    async def death(self, member, percent, growth, base):
+        total = (percent * growth) + (base * 10)
+
+        if(total >= 10000):
             await client.send_message(self.message.channel, str(member.name) + " died at " + str(percent) + "%")
             rolePercent = discord.utils.get(self.message.server.roles, name=str(percent) + "%")
             await client.remove_roles(member, rolePercent)
@@ -105,9 +120,37 @@ class SmashFn():
             await client.add_roles(member, rolePercent)
             self.died = True
 
+    async def Turn(self):
+        for member in self.message.server.members:
+            roles = discord.utils.get(self.message.server.members, name=member.name).roles
+            for i in roles:
+                roleSpill = str(i).split()
+                if(roleSpill[0][-1] == "%"):
+                    continue
+                else:
+                    await client.wait_until_ready()
+                    rolePercent = discord.utils.get(self.message.server.roles, name='0%')
+                    await client.add_roles(self.message.author, rolePercent)
+                    await client.delete_message(self.message)
+                    await client.send_message(self.message.channel, str(self.message.author) + "has joined the game!")
+
+    async def Start(self):
+
+        await client.send_message(self.message.channel, "The players are:")
+        for member in self.message.server.members:
+            await client.wait_until_ready()
+            roles = discord.utils.get(self.message.server.members, name=member.name).roles
+            for i in roles:
+                roleSpill = str(i).split()
+                if(roleSpill[0][-1] == "%"):
+                    await client.send_message(self.message.channel, str(member))
+
+
+
+
+
 #turn[0], 3 stocks
 
-#total Knockback == (percent * knockback growth) + base knockback
 
 @client.event
 async def on_message(message):
@@ -147,5 +190,19 @@ async def on_message(message):
 
     if (message.content.startswith("|falcon punch")):
         await Smash.attack(27, 100, 1)
+
+    if (message.content.startswith("|ce")):
+        await Smash.attack(15, 100, 60)
+
+    if (message.content.startswith("|test")):
+        role = discord.utils.get(message.server.roles, name=message.content[6:])
+        print(role.position)
+
+
+    if (message.content.startswith("|join")):
+        await Smash.Turn()
+
+    if (message.content.startswith("|start")):
+        await Smash.Start()
 
 client.run(str(os.environ.get('BOT_TOKEN')))
