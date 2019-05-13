@@ -47,15 +47,17 @@ class SmashFn():
     def __init__(self, message):
         self.message = message
         self.died = False
+        self.create = True
 
     async def reset(self):
         for i in range(100):
             for i in self.message.server.roles:
-                if(str(i)[-1] == "%"):
+                if(str(i)[-1] == "%" or str(i)[:4] == "turn" or str(i) == "Playing"):
                     await client.delete_role(self.message.server, i)
 
         await client.create_role(self.message.server, name = "0%", colour = discord.Colour(0xffffff))
         await client.send_message(self.message.channel, "Type \"|join\" to play!")
+
 
     async def attack(self, percentChange: int, growth: int, base: int):
         for member in self.message.server.members:
@@ -102,17 +104,37 @@ class SmashFn():
                                 await client.send_message(self.message.channel, str(member.name) + " now has " + numStr)
                                 self.died = False
 
+    # Checks if player is in game
     def check(self):
+        status = discord.utils.get(self.message.server.roles, name="Playing")
+        if(str(status) == "playing"):
+            return True
+
         roles = discord.utils.get(self.message.server.members, name=self.message.author.name).roles
         for i in roles:
             roleSpill = str(i).split()
-            if (roleSpill[0][-1] == "%"):
+            if (roleSpill[0][-1] == "%" or roleSpill[0][:4] == "turn"):
                 return True
 
+    # Health and Percent math till death
     async def death(self, member, percent, growth, base):
         total = (percent * growth) + (base * 10)
 
         if(total >= 10000):
+
+            await client.wait_until_ready()
+            roles = discord.utils.get(self.message.server.members, name=self.message.author.name).roles
+            for i in roles:
+                roleSpill = str(i).split()
+                if (roleSpill[0][:4] == "turn"):
+                    newNum = roleSpill[1]
+                    await client.delete_role(self.message.server, i)
+                    nextTurn = str(roleSpill[0]) + " " + str(int(newNum) - 1) + " stocks"
+                    await client.create_role(self.message.server, name=nextTurn)
+            await client.wait_until_ready()
+            roleTurn = discord.utils.get(self.message.server.roles, name=nextTurn)
+            await client.add_roles(self.message.author, roleTurn)
+            
             await client.send_message(self.message.channel, str(member.name) + " died at " + str(percent) + "%")
             rolePercent = discord.utils.get(self.message.server.roles, name=str(percent) + "%")
             await client.remove_roles(member, rolePercent)
@@ -120,20 +142,41 @@ class SmashFn():
             await client.add_roles(member, rolePercent)
             self.died = True
 
-    async def Turn(self):
-        for member in self.message.server.members:
-            roles = discord.utils.get(self.message.server.members, name=member.name).roles
-            for i in roles:
-                roleSpill = str(i).split()
-                if(roleSpill[0][-1] == "%"):
-                    continue
-                else:
-                    await client.wait_until_ready()
-                    rolePercent = discord.utils.get(self.message.server.roles, name='0%')
-                    await client.add_roles(self.message.author, rolePercent)
-                    await client.delete_message(self.message)
-                    await client.send_message(self.message.channel, str(self.message.author) + "has joined the game!")
 
+    # Joins the player to the game
+    async def Turn(self):
+        if(self.check()):
+            await client.send_message(self.message.channel, str(self.message.author) + " is unable to join")
+        else:
+            rolePercent = discord.utils.get(self.message.server.roles, name='0%')
+            await client.add_roles(self.message.author, rolePercent)
+
+
+            turnList = []
+            for member in self.message.server.members:
+                await client.wait_until_ready()
+                roles = discord.utils.get(self.message.server.members, name=member.name).roles
+                for i in roles:
+                    roleSpill = str(i).split()
+                    if (roleSpill[0][:4] == "turn"):
+                        turnList.append(roleSpill[0][5])
+                        turnList.sort()
+                        self.create = False
+
+            if(self.create):
+                await client.create_role(self.message.server, name="turn[0], 3 stocks")
+                nextTurn = "turn[0], 3 stocks"
+            else:
+                nextTurn = "turn[" + str(int(turnList[-1]) + 1) + "], 3 stocks"
+                await client.create_role(self.message.server, name=nextTurn)
+
+            roleTurn = discord.utils.get(self.message.server.roles, name=nextTurn)
+            await client.add_roles(self.message.author, roleTurn)
+            await client.delete_message(self.message)
+            await client.send_message(self.message.channel, str(self.message.author) + " has joined the game!")
+
+
+    # Starts the Game
     async def Start(self):
 
         await client.send_message(self.message.channel, "The players are:")
@@ -145,6 +188,9 @@ class SmashFn():
                 if(roleSpill[0][-1] == "%"):
                     await client.send_message(self.message.channel, str(member))
 
+        await client.create_role(self.message.server, name="Playing")
+        status = discord.utils.get(self.message.server.roles, name="Playing")
+        await client.add_roles(self.message.server.me, status)
 
 
 
